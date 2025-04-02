@@ -1,26 +1,57 @@
 <template>
-  <div class="home">
-    <div class="col-md-6 mx-auto">
-      <div class="form-group d-flex">
-        <input
-          class="form-control"
-          v-model="todo"
-          placeholder="Enter todo"
-          type="text"
-        />
-        <button class="btn btn-success" @click="createTodo">Create</button>
+  <div class="home container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-8 col-lg-6">
+
+        <!-- Header -->
+        <div class="text-center mb-4">
+          <h2 class="fw-bold text-primary">📝 My To-Do List</h2>
+          <p class="text-muted mb-0">Stay organized. Stay productive.</p>
+        </div>
+
+        <!-- Input Section -->
+        <div class="input-group shadow-sm mb-4">
+          <input
+              v-model="todo"
+              type="text"
+              class="form-control form-control-lg"
+              placeholder="What needs to be done?"
+          />
+          <button class="btn btn-primary btn-lg" @click="createTodo">
+            Add
+          </button>
+        </div>
+
+        <!-- Task List -->
+        <ul class="list-group shadow rounded overflow-hidden">
+          <li
+              v-for="todo in todos"
+              :key="todo.uuid"
+              class="list-group-item d-flex justify-content-between align-items-center"
+              :class="{ 'text-muted text-decoration-line-through bg-light': todo.is_completed }"
+              @click="updateTodo(todo.uuid, todo.is_completed)"
+              style="cursor: pointer;"
+          >
+            <span class="flex-grow-1 me-3">
+              {{ todo.todo_name }}
+            </span>
+            <span class="badge rounded-pill"
+                  :class="todo.is_completed ? 'bg-success' : 'bg-warning text-dark'">
+              {{ todo.is_completed ? 'Done' : 'Pending' }}
+            </span>
+          </li>
+          <li
+              v-if="todos.length === 0"
+              class="list-group-item text-center text-muted bg-light"
+          >
+            No tasks yet. Start by adding one above!
+          </li>
+        </ul>
       </div>
-      <ul class="list-group mt-4">
-        <li @click="updateTodo(todo.uuid, todo.is_completed)" v-for="todo in todos" :key="todo.uuid" class="list-group-item">
-          <strike v-if="todo.is_completed">
-            {{ todo.todo_name }}
-          </strike>
-          <p v-else> {{ todo.todo_name }}</p>
-        </li>
-      </ul>
     </div>
   </div>
 </template>
+
 
 <script>
 export default {
@@ -56,7 +87,7 @@ export default {
     })
     .then(data => {
       console.log("Updated todo:", data); // Log the updated todo data
-      
+
       // Manually update the todo in the local `todos` array
       const index = this.todos.findIndex(todo => todo.uuid === uuid);
       if (index !== -1) {
@@ -82,19 +113,19 @@ export default {
       };
 
       fetch("http://127.0.0.1:8000/api/todo/", requestOptions)
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then((data) => {
-          this.todos = data.data || data; // Assign fetched todos to the todos array
-          console.log("Fetched todos:", this.todos); // Log the fetched todos
-        })
-        .catch((error) => {
-          console.error("Error fetching todos:", error);
-        });
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then((data) => {
+            this.todos = data.data || data; // Assign fetched todos to the todos array
+            console.log("Fetched todos:", this.todos); // Log the fetched todos
+          })
+          .catch((error) => {
+            console.error("Error fetching todos:", error);
+          });
     },
 
     createTodo() {
@@ -111,21 +142,37 @@ export default {
       };
 
       fetch("http://127.0.0.1:8000/api/todo/", requestOptions)
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then((data) => {
-          console.log("Created todo:", data); // Log the created todo
-          this.todos.push(data.data || data); // Add the new todo to the todos array
-          this.todo = ""; // Clear the input field after creating the todo
-        })
-        .catch((error) => {
-          console.error("Error creating todo:", error);
-        });
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then((data) => {
+            console.log("Created todo:", data); // Log the created todo
+            this.todos.push(data.data || data); // Add the new todo to the todos array
+            this.todo = ""; // Clear the input field after creating the todo
+          })
+          .catch((error) => {
+            console.error("Error creating todo:", error);
+          });
     },
   },
 };
 </script>
+
+
+<style scoped>
+input::placeholder {
+  opacity: 0.65;
+}
+
+.list-group-item {
+  transition: background-color 0.2s ease-in-out;
+}
+
+.list-group-item:hover {
+  background-color: #f8f9fa;
+}
+</style>
+
