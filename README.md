@@ -23,8 +23,8 @@ A full-stack task tracking application built with **Vue.js** (frontend) and **Dj
 
 ### 1️⃣ Clone the Repository
 
-```bash
-git clone https://github.com/your-username/to-do-tracker.git
+```bash[
+git clone https://github.com/your-username/to-do-tracker.git](https://github.com/YounusEjazi/To-Do-Tracker.git
 cd to-do-tracker
 ```
 
