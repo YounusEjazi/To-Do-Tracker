@@ -1,57 +1,118 @@
 <template>
   <div class="home container py-5">
     <div class="row justify-content-center">
-      <div class="col-md-8 col-lg-6">
+      <div class="col-md-10">
 
         <!-- Header -->
-        <div class="text-center mb-4">
-          <h2 class="fw-bold text-primary">📝 My To-Do List</h2>
-          <p class="text-muted mb-0">Stay organized. Stay productive.</p>
+        <div class="text-center mb-5">
+          <h2 class="fw-bold text-primary">📝 Smart To-Do List</h2>
+          <p class="text-muted">Manage tasks with priorities, deadlines, tags, subtasks and more.</p>
         </div>
 
-        <!-- Input Section -->
-        <div class="input-group shadow-sm mb-4">
-          <input
-              v-model="todo"
-              type="text"
-              class="form-control form-control-lg"
-              placeholder="What needs to be done?"
-          />
-          <button class="btn btn-primary btn-lg" @click="createTodo">
-            Add
-          </button>
+        <!-- Task Creation -->
+        <div class="card mb-4 shadow">
+          <div class="card-body">
+            <div class="row g-2 align-items-center">
+              <div class="col-md-4">
+                <input v-model="todo" type="text" class="form-control" placeholder="Enter task..." />
+              </div>
+              <div class="col-md-2">
+                <select v-model="priority" class="form-select">
+                  <option disabled value="">Priority</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <input v-model="dueDate" type="date" class="form-control" />
+              </div>
+              <div class="col-md-3">
+                <input v-model="tags" type="text" class="form-control" placeholder="Tags (comma-separated)" />
+              </div>
+            </div>
+            <div class="mt-3">
+              <textarea v-model="description" class="form-control" placeholder="Description (optional)"></textarea>
+              <button class="btn btn-primary mt-2" @click="createTodo">Add</button>
+            </div>
+          </div>
         </div>
 
         <!-- Task List -->
-        <ul class="list-group shadow rounded overflow-hidden">
-          <li
+        <div class="card shadow">
+          <div class="card-header d-flex justify-content-between">
+            <span class="fw-bold">Your Tasks</span>
+            <span class="text-muted">Click to mark as complete</span>
+          </div>
+          <ul class="list-group list-group-flush">
+            <li
               v-for="todo in todos"
               :key="todo.uuid"
-              class="list-group-item d-flex justify-content-between align-items-center"
-              :class="{ 'text-muted text-decoration-line-through bg-light': todo.is_completed }"
-              @click="updateTodo(todo.uuid, todo.is_completed)"
-              style="cursor: pointer;"
-          >
-            <span class="flex-grow-1 me-3">
-              {{ todo.todo_name }}
-            </span>
-            <span class="badge rounded-pill"
-                  :class="todo.is_completed ? 'bg-success' : 'bg-warning text-dark'">
-              {{ todo.is_completed ? 'Done' : 'Pending' }}
-            </span>
-          </li>
-          <li
+              class="list-group-item"
+              :class="{ 'text-decoration-line-through text-muted': todo.is_completed }"
+            >
+              <div class="d-flex justify-content-between align-items-start w-100">
+                <div @click="() => updateTodo(todo)" style="cursor: pointer;" class="flex-grow-1">
+                  <div class="fw-bold">{{ todo.todo_name }}</div>
+                  <small v-if="todo.due_date">📅 {{ new Date(todo.due_date).toLocaleDateString() }}</small>
+                  <div v-if="todo.description" class="text-muted small">{{ todo.description }}</div>
+                </div>
+
+                <div class="text-end ms-2">
+                  <!-- Priority Badge -->
+                  <span class="badge me-1" :class="{
+                    'bg-danger': todo.priority === 'high',
+                    'bg-warning text-dark': todo.priority === 'medium',
+                    'bg-info text-dark': todo.priority === 'low'
+                  }">
+                    {{ todo.priority }}
+                  </span>
+
+                  <!-- Toggle Status -->
+                  <span class="badge me-1" :class="{
+                    'bg-success': todo.is_completed,
+                    'bg-secondary': !todo.is_completed
+                  }">
+                    {{ todo.is_completed ? 'Done' : 'Pending' }}
+                  </span>
+
+                  <!-- Tags -->
+                  <span
+                    v-if="todo.tags?.length"
+                    class="badge bg-secondary"
+                  >{{ todo.tags.join(', ') }}</span>
+
+                  <!-- Priority Edit -->
+                  <select class="form-select form-select-sm d-inline-block w-auto ms-2"
+                    v-model="todo.priority"
+                    @change="changePriority(todo)"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+
+                  <!-- Delete Button -->
+                  <button class="btn btn-sm btn-outline-danger ms-2" @click="deleteTodo(todo.uuid)">
+                    ❌
+                  </button>
+                </div>
+              </div>
+            </li>
+
+            <li
               v-if="todos.length === 0"
-              class="list-group-item text-center text-muted bg-light"
-          >
-            No tasks yet. Start by adding one above!
-          </li>
-        </ul>
+              class="list-group-item text-center text-muted"
+            >
+              No tasks yet. Start by adding one!
+            </li>
+          </ul>
+        </div>
+
       </div>
     </div>
   </div>
 </template>
-
 
 <script>
 export default {
@@ -59,120 +120,100 @@ export default {
   data() {
     return {
       todo: "",
-      todos: [], // Store fetched todos here
+      description: "",
+      priority: "medium",
+      dueDate: "",
+      tags: "",
+      todos: []
     };
   },
   created() {
-    this.getTodos(); // Fetch the todos when the component is created
+    this.getTodos();
   },
   methods: {
-    updateTodo(uuid, is_completed) {
-  const token = localStorage.getItem("token");
-
-  const requestOptions = {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`, // Correct authorization header
+    getAuthHeaders() {
+      return {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`
+      };
     },
-    body: JSON.stringify({ uuid: uuid, is_completed: !is_completed }), // Toggle the completed state
-  };
-
-  fetch(`http://127.0.0.1:8000/api/todo/${uuid}/`, requestOptions) // Use uuid in URL for PATCH
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return response.json();
-    })
-    .then(data => {
-      console.log("Updated todo:", data); // Log the updated todo data
-
-      // Manually update the todo in the local `todos` array
-      const index = this.todos.findIndex(todo => todo.uuid === uuid);
-      if (index !== -1) {
-        this.todos[index].is_completed = !is_completed; // Toggle the completed state in the UI
-      }
-    })
-    .catch(error => {
-      console.error("Error updating todo:", error); // Log any errors that occur
-    });
-},
-
-
     getTodos() {
-      const token = localStorage.getItem("token");
-      console.log("Token for GET request:", token); // Log the token to ensure it's correct
-
-      const requestOptions = {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // Correct authorization header
-        },
-      };
-
-      fetch("http://127.0.0.1:8000/api/todo/", requestOptions)
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-          })
-          .then((data) => {
-            this.todos = data.data || data; // Assign fetched todos to the todos array
-            console.log("Fetched todos:", this.todos); // Log the fetched todos
-          })
-          .catch((error) => {
-            console.error("Error fetching todos:", error);
-          });
+      fetch("http://127.0.0.1:8000/api/todo/", {
+        headers: this.getAuthHeaders()
+      })
+        .then(res => res.json())
+        .then(res => {
+          this.todos = res.data || [];
+        })
+        .catch(err => console.error(err));
     },
-
     createTodo() {
-      const token = localStorage.getItem("token");
-      console.log("Token for POST request:", token); // Log the token to ensure it's correct
-
-      const requestOptions = {
+      if (!this.todo.trim()) return;
+      fetch("http://127.0.0.1:8000/api/todo/", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // Correct authorization header
-        },
-        body: JSON.stringify({ todo_name: this.todo }),
-      };
-
-      fetch("http://127.0.0.1:8000/api/todo/", requestOptions)
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-          })
-          .then((data) => {
-            console.log("Created todo:", data); // Log the created todo
-            this.todos.push(data.data || data); // Add the new todo to the todos array
-            this.todo = ""; // Clear the input field after creating the todo
-          })
-          .catch((error) => {
-            console.error("Error creating todo:", error);
-          });
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({
+          todo_name: this.todo,
+          description: this.description,
+          priority: this.priority,
+          due_date: this.dueDate || null,
+          tags: this.tags.split(',').map(t => t.trim()).filter(Boolean)
+        })
+      })
+        .then(res => res.json())
+        .then(res => {
+          if (res.data) {
+            this.todos.push(res.data);
+            this.todo = "";
+            this.description = "";
+            this.priority = "medium";
+            this.dueDate = "";
+            this.tags = "";
+          }
+        })
+        .catch(err => console.error(err));
     },
-  },
+    updateTodo(todo) {
+      fetch(`http://127.0.0.1:8000/api/todo/${todo.uuid}/`, {
+        method: "PATCH",
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ is_completed: !todo.is_completed })
+      })
+        .then(() => {
+          todo.is_completed = !todo.is_completed;
+        })
+        .catch(err => console.error(err));
+    },
+    changePriority(todo) {
+      fetch(`http://127.0.0.1:8000/api/todo/${todo.uuid}/`, {
+        method: "PATCH",
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ priority: todo.priority })
+      }).catch(err => console.error(err));
+    },
+    deleteTodo(uuid) {
+      if (!confirm("Delete this task?")) return;
+      fetch(`http://127.0.0.1:8000/api/todo/${uuid}/`, {
+        method: "DELETE",
+        headers: this.getAuthHeaders()
+      })
+        .then(() => {
+          this.todos = this.todos.filter(t => t.uuid !== uuid);
+        })
+        .catch(err => console.error(err));
+    }
+  }
 };
 </script>
 
-
 <style scoped>
-input::placeholder {
+input::placeholder, textarea::placeholder {
   opacity: 0.65;
 }
-
 .list-group-item {
   transition: background-color 0.2s ease-in-out;
 }
-
 .list-group-item:hover {
   background-color: #f8f9fa;
 }
 </style>
-
